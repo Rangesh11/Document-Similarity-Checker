@@ -14,7 +14,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes); 
-// app.use('/api/documents', compareRoutes);
+app.use('/api/documents', compareRoutes);
 
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
