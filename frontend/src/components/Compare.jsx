@@ -33,7 +33,7 @@ const Compare = () => {
       formData.append('documents', file1);
       formData.append('documents', file2);
 
-      const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODA0OGJlMDZmNTBiMWRhMThhOGZjOGMiLCJpYXQiOjE3NDUxMjkyMDEsImV4cCI6MTc0NTEzMjgwMX0.USxFuq66vM1xQctidtJHLCL9i_uYuPr0wgmC2FoxpWU"; // Replace with your actual JWT token
+      const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODA0OGJlMDZmNTBiMWRhMThhOGZjOGMiLCJpYXQiOjE3NDUxMzMyODMsImV4cCI6MTc0NTEzNjg4M30.FUe2EUD0oyle2FiOTaQTMt1XqmaFrOmZ7og4oXTveHI"; // Replace with your actual JWT token
 
       const response = await axios.post('http://localhost:5000/api/documents/compare', formData, {
         headers: {
