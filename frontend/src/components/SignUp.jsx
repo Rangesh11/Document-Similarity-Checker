@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { setCredentials } from '../redux/authSlice';
 
 const SignUp = () => {
   const [name, setName] = useState('');
@@ -7,6 +9,7 @@ const SignUp = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false); // Adding a loading state
+  const dispatch = useDispatch();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,12 +29,13 @@ const SignUp = () => {
       });
 
       const { token } = response.data;
+      dispatch(setCredentials({ user: { name, email }, token }));
 
       // Handle the token (store it, redirect user, etc.)
       console.log('Signed up successfully!', token);
 
       // Optionally, you can redirect the user to login after successful sign-up
-      window.location.href = '/login';
+      window.location.href = '/dashboard';
     } catch (err) {
       setError(err.response?.data?.error || 'An error occurred');
     } finally {

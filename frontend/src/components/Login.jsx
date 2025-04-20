@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { setCredentials } from '../redux/authSlice'; // adjust path if needed
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const dispatch = useDispatch();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,6 +19,7 @@ const Login = () => {
       });
 
       const { token } = response.data;
+      dispatch(setCredentials({ user: { email }, token }));
 
       // Store the token in localStorage (or sessionStorage depending on your preference)
       localStorage.setItem('token', token);

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useSelector } from 'react-redux';
 
 const Compare = () => {
   const [file1, setFile1] = useState(null);
@@ -7,6 +8,8 @@ const Compare = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
+  const { user, token } = useSelector((state) => state.auth);
+
 
   const handleFileChange = (e, setFile) => {
     const file = e.target.files[0];
@@ -19,6 +22,7 @@ const Compare = () => {
   };
 
   const handleSubmit = async (e) => {
+    console.log(token);
     e.preventDefault();
     if (!file1 || !file2) {
       setError('Please upload exactly two PDF files.');
@@ -33,7 +37,7 @@ const Compare = () => {
       formData.append('documents', file1);
       formData.append('documents', file2);
 
-      const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODA0OGJlMDZmNTBiMWRhMThhOGZjOGMiLCJpYXQiOjE3NDUxMzMyODMsImV4cCI6MTc0NTEzNjg4M30.FUe2EUD0oyle2FiOTaQTMt1XqmaFrOmZ7og4oXTveHI"; // Replace with your actual JWT token
+    //   const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODA0OGJlMDZmNTBiMWRhMThhOGZjOGMiLCJpYXQiOjE3NDUxMzMyODMsImV4cCI6MTc0NTEzNjg4M30.FUe2EUD0oyle2FiOTaQTMt1XqmaFrOmZ7og4oXTveHI"; // Replace with your actual JWT token
 
       const response = await axios.post('http://localhost:5000/api/documents/compare', formData, {
         headers: {
@@ -41,6 +45,8 @@ const Compare = () => {
           'Authorization': `Bearer ${token}`,
         },
       });
+
+      
 
       setResult(response.data);
     } catch (err) {
