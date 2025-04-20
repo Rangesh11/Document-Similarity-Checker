@@ -3,6 +3,280 @@ const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const { text } = require('express');
 
+const natural = require('natural');
+const tokenizer = new natural.WordTokenizer();
+const stemmer = natural.PorterStemmer;
+
+// Add this function to generate explanations based on analysis
+const generateSimilarityExplanation = (result) => {
+  const overallSimilarity = parseFloat(result.similarity);
+  const jaccardSim = parseFloat(result.jaccardSimilarity);
+  const sharedSequencesCount = result.sharedSequences?.length || 0;
+  const similarParagraphsCount = result.similarContent?.length || 0;
+  
+  let explanation = {
+    summary: '',
+    factors: [],
+    details: '',
+    recommendations: []
+  };
+  
+  // Generate summary based on similarity level
+  if (overallSimilarity >= 0.8) {
+    explanation.summary = 'The documents show very high similarity, indicating potential substantial copying or shared authorship.';
+  } else if (overallSimilarity >= 0.6) {
+    explanation.summary = 'The documents show significant similarity that exceeds typical coincidental matches.';
+  } else if (overallSimilarity >= 0.4) {
+    explanation.summary = 'The documents show moderate similarity that may indicate shared concepts or limited copied content.';
+  } else {
+    explanation.summary = 'The documents show low similarity, suggesting mostly original content with minimal overlap.';
+  }
+  
+  // Add contributing factors
+  explanation.factors = [
+    {
+      name: 'Vocabulary Overlap',
+      value: jaccardSim,
+      description: `The documents share ${Math.round(jaccardSim * 100)}% of their unique words, ${
+        jaccardSim > 0.6 ? 'suggesting potentially shared authorship or subject matter' : 
+        jaccardSim > 0.3 ? 'indicating moderate lexical overlap' : 
+        'indicating distinct vocabulary choices'
+      }.`
+    },
+    {
+      name: 'Shared Phrases',
+      value: Math.min(1, sharedSequencesCount / 10),
+      description: `${sharedSequencesCount} significant shared phrases were detected${
+        sharedSequencesCount > 10 ? ', which strongly suggests direct copying' : 
+        sharedSequencesCount > 5 ? ', indicating some potentially copied content' : 
+        ', representing minimal phrase-level similarity'
+      }.`
+    },
+    {
+      name: 'Similar Paragraphs',
+      value: Math.min(1, similarParagraphsCount / result.doc1Paragraphs?.length || 1),
+      description: `${similarParagraphsCount} out of ${result.doc1Paragraphs?.length || 'unknown'} paragraphs show significant similarity${
+        similarParagraphsCount > result.doc1Paragraphs?.length * 0.5 ? ', suggesting widespread content overlap' : 
+        similarParagraphsCount > 3 ? ', indicating multiple sections with shared content' : 
+        ', representing isolated instances of similar content'
+      }.`
+    }
+  ];
+  
+  // Generate detailed analysis
+  const wordsDoc1 = tokenizer.tokenize((result.doc1Text || '').toLowerCase());
+  const wordsDoc2 = tokenizer.tokenize((result.doc2Text || '').toLowerCase());
+  
+  const uniqueWordsDoc1 = new Set(wordsDoc1.map(word => stemmer.stem(word)));
+  const uniqueWordsDoc2 = new Set(wordsDoc2.map(word => stemmer.stem(word)));
+  
+  const uniqueToDoc1 = [...uniqueWordsDoc1].filter(word => !uniqueWordsDoc2.has(word)).length;
+  const uniqueToDoc2 = [...uniqueWordsDoc2].filter(word => !uniqueWordsDoc1.has(word)).length;
+  const sharedWords = [...uniqueWordsDoc1].filter(word => uniqueWordsDoc2.has(word)).length;
+  
+  explanation.details = `
+Analysis reveals that Document 1 contains approximately ${uniqueToDoc1} unique terms not found in Document 2, 
+while Document 2 contains about ${uniqueToDoc2} unique terms not found in Document 1. 
+The documents share approximately ${sharedWords} terms in common.
+
+${similarParagraphsCount > 0 ? 
+    `The highest similarity is found in paragraph ${result.similarContent[0].index1 + 1} of Document 1 and 
+    paragraph ${result.similarContent[0].index2 + 1} of Document 2, with a similarity score of 
+    ${Math.round(parseFloat(result.similarContent[0].similarity) * 100)}%.` : 
+    'No individual paragraphs with significant similarity were identified.'}
+  `.trim();
+  
+  // Generate recommendations
+  if (overallSimilarity >= 0.7) {
+    explanation.recommendations.push('Review the most similar sections highlighted in the report to identify potential plagiarism concerns.');
+    explanation.recommendations.push('Consider checking the authorship of both documents to determine if they share a common source.');
+  }
+  
+  if (similarParagraphsCount > 0) {
+    explanation.recommendations.push('Examine paragraphs with high similarity scores for potential direct copying or paraphrasing.');
+  }
+  
+  if (overallSimilarity < 0.3) {
+    explanation.recommendations.push('The documents appear substantially different. No immediate plagiarism concerns are evident.');
+  }
+  
+  return explanation;
+};
+
+// Add semantic similarity analysis
+const calculateSemanticSimilarity = (text1, text2) => {
+  // This is a simplified semantic analysis - in a real implementation, 
+  // you might use a more sophisticated NLP model or external API
+  
+  // Extract key phrases (simplified)
+  const extractKeyPhrases = (text) => {
+    const words = tokenizer.tokenize(text.toLowerCase());
+    const stemmed = words.map(word => stemmer.stem(word));
+    return stemmed.filter(word => word.length > 3);
+  };
+  
+  const phrases1 = extractKeyPhrases(text1);
+  const phrases2 = extractKeyPhrases(text2);
+  
+  // Calculate overlap of concepts
+  const set1 = new Set(phrases1);
+  const set2 = new Set(phrases2);
+  
+  const intersection = [...set1].filter(phrase => set2.has(phrase));
+  
+  // Return semantic similarity score (0-1)
+  return intersection.length / Math.max(set1.size, set2.size);
+};
+
+// Modify the main compareDocuments function to include the new features
+exports.compareDocuments = async (req, res) => {
+  try {
+    // Check if files are uploaded
+    if (!req.files || req.files.length !== 2) {
+      return res.status(400).json({ 
+        error: 'Please upload exactly two files for comparison.' 
+      });
+    }
+
+    // Extract text from both documents
+    const file1 = req.files[0];
+    const file2 = req.files[1];
+    
+    // Parse text from different file formats
+    let text1, text2;
+    try {
+      text1 = await extractText(file1);
+      text2 = await extractText(file2);
+    } catch (error) {
+      return res.status(400).json({ 
+        error: `Error extracting text: ${error.message}` 
+      });
+    }
+
+    // Check if extracted text is valid
+    if (!text1 || !text2 || text1.length < 10 || text2.length < 10) {
+      return res.status(400).json({ 
+        error: 'One or both documents are empty or could not be properly parsed.' 
+      });
+    }
+
+    // Calculate similarity metrics
+    const cosineSim = computeSimilarity(text1, text2);
+    const jaccardSim = jaccardSimilarity(text1, text2);
+    const semanticSim = calculateSemanticSimilarity(text1, text2);
+    const hammingDistance = compareFingerprints(text1, text2);
+    
+    // Find similar content between documents
+    const { similar, paras1, paras2 } = getSimilarContent(text1, text2);
+    
+    // Get shared sequences for further analysis
+    const sharedSequences = findSharedSequences(text1, text2);
+    
+    // Determine if plagiarism is detected
+    const isPlagiarized = detectPlagiarism(cosineSim, jaccardSim, similar);
+
+    // Prepare detailed paragraph summary
+    let paragraphAnalysis = [];
+    if (similar.length > 0) {
+      // Sort by similarity score (highest first)
+      paragraphAnalysis = similar.sort((a, b) => 
+        parseFloat(b.similarity) - parseFloat(a.similarity)
+      );
+    }
+
+    // Create result object
+    const resultData = {
+      similarity: cosineSim.toFixed(4),
+      jaccardSimilarity: jaccardSim.toFixed(4),
+      semanticSimilarity: semanticSim.toFixed(4),
+      hammingDistance,
+      plagiarismDetected: isPlagiarized ? 'Yes' : 'No',
+      similarContent: paragraphAnalysis,
+      doc1Paragraphs: paras1,
+      doc2Paragraphs: paras2,
+      doc1Text: text1, // Store for explanation generation
+      doc2Text: text2, // Store for explanation generation
+      sharedSequences: sharedSequences.slice(0, 20),  // Limit to top 20 shared sequences
+      fileInfo: {
+        file1: {
+          name: file1.originalname,
+          size: file1.size,
+          type: file1.mimetype
+        },
+        file2: {
+          name: file2.originalname,
+          size: file2.size,
+          type: file2.mimetype
+        }
+      }
+    };
+    
+    // Generate AI explanation
+    resultData.explanation = generateSimilarityExplanation(resultData);
+    
+    // Identify most distinctive words in each document
+    const wordsDoc1 = text1.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
+    const wordsDoc2 = text2.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
+    
+    const freqDoc1 = {};
+    wordsDoc1.forEach(word => freqDoc1[word] = (freqDoc1[word] || 0) + 1);
+    
+    const freqDoc2 = {};
+    wordsDoc2.forEach(word => freqDoc2[word] = (freqDoc2[word] || 0) + 1);
+    
+    const doc1Words = Object.keys(freqDoc1).map(word => ({ word, count: freqDoc1[word] }));
+    const doc2Words = Object.keys(freqDoc2).map(word => ({ word, count: freqDoc2[word] }));
+    
+    resultData.topWords = {
+      doc1: doc1Words.sort((a, b) => b.count - a.count).slice(0, 10),
+      doc2: doc2Words.sort((a, b) => b.count - a.count).slice(0, 10)
+    };
+    
+    // Calculate frequency distribution for charts
+    resultData.sentenceLengthData = {
+      doc1: analyzeTextStructure(text1),
+      doc2: analyzeTextStructure(text2)
+    };
+    
+    // Send response with comprehensive analysis
+    res.json(resultData);
+  } catch (error) {
+    console.error("Error occurred during comparison: ", error);
+    res.status(500).json({ 
+      error: 'Error comparing documents. Please try again.' 
+    });
+  }
+};
+
+// Add text structure analysis function
+const analyzeTextStructure = (text) => {
+  // Split into sentences (simple approach)
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  
+  // Calculate sentence lengths
+  const lengths = sentences.map(s => {
+    const words = s.trim().split(/\s+/).length;
+    return { length: words };
+  });
+  
+  // Group by length range for chart display
+  const distribution = {};
+  lengths.forEach(item => {
+    let range;
+    if (item.length <= 5) range = '1-5';
+    else if (item.length <= 10) range = '6-10';
+    else if (item.length <= 15) range = '11-15';
+    else if (item.length <= 20) range = '16-20';
+    else range = '21+';
+    
+    distribution[range] = (distribution[range] || 0) + 1;
+  });
+  
+  return {
+    averageLength: lengths.reduce((sum, item) => sum + item.length, 0) / (lengths.length || 1),
+    distribution: Object.entries(distribution).map(([range, count]) => ({ range, count }))
+  };
+};
 const getFingerprint = (text) => {
   return crypto.createHash('sha256').update(text).digest('hex');
 };
@@ -278,29 +552,39 @@ exports.compareDocuments = async (req, res) => {
       );
     }
 
+    // Prepare result for explanation
+const resultData = {
+  similarity: cosineSim.toFixed(4),
+  jaccardSimilarity: jaccardSim.toFixed(4),
+  hammingDistance,
+  similarContent: paragraphAnalysis,
+  doc1Paragraphs: paras1,
+  doc2Paragraphs: paras2,
+  doc1Text: text1,
+  doc2Text: text2,
+  sharedSequences: sharedSequences.slice(0, 20),
+  fileInfo: {
+    file1: {
+      name: file1.originalname,
+      size: file1.size,
+      type: file1.mimetype
+    },
+    file2: {
+      name: file2.originalname,
+      size: file2.size,
+      type: file2.mimetype
+    }
+  }
+};
+
+// Add explanation
+resultData.explanation = generateSimilarityExplanation(resultData);
+
+// Add plagiarism status separately
+resultData.plagiarismDetected = isPlagiarized ? 'Yes' : 'No';
+
     // Send response with comprehensive analysis
-    res.json({
-      similarity: cosineSim.toFixed(4),
-      jaccardSimilarity: jaccardSim.toFixed(4),
-      hammingDistance,
-      plagiarismDetected: isPlagiarized ? 'Yes' : 'No',
-      similarContent: paragraphAnalysis,
-      doc1Paragraphs: paras1,
-      doc2Paragraphs: paras2,
-      sharedSequences: sharedSequences.slice(0, 20),  // Limit to top 20 shared sequences
-      fileInfo: {
-        file1: {
-          name: file1.originalname,
-          size: file1.size,
-          type: file1.mimetype
-        },
-        file2: {
-          name: file2.originalname,
-          size: file2.size,
-          type: file2.mimetype
-        }
-      }
-    });
+    res.json(resultData);
   } catch (error) {
     console.error("Error occurred during comparison: ", error);
     res.status(500).json({ 
