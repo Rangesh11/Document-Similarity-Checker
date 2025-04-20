@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Login from './components/Login';  // Import your Login component
 import SignUp from './components/SignUp';  // Import your SignUp component
+import Compare from './components/Compare'
 
 const App = () => {
   return (
@@ -11,6 +12,7 @@ const App = () => {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
+          <Route path="/dashboard" element={<Compare/>} />
         </Routes>
       </div>
     </Router>
