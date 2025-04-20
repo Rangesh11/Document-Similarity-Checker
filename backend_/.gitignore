@@ -1,0 +1,36 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+logfile*
+
+# VSCode settings
+.vscode/
+
+# Uploads or temp files (optional, depending on usage)
+uploads/
+temp/
+*.pdf
+
+# Build
+dist/
+build/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# MongoDB dump files
+dump/
