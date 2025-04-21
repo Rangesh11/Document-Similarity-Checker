@@ -1,47 +1,34 @@
 import React from 'react';
-import { BarChart2, FileText, HelpCircle } from 'lucide-react';
+import { FileText, BarChart2, Database } from 'lucide-react';
+import { useSelector } from 'react-redux';
 
 const Header = () => {
+  const { user } = useSelector((state) => state.auth);
+
   return (
-    <header className="bg-white shadow-md py-4 px-6 mb-6">
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between">
-        
-        {/* Logo and Title */}
-        <div className="flex items-center space-x-3 mb-4 md:mb-0">
-          <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg p-2 shadow">
-            <FileText className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-800">Document Similarity Checker</h1>
-            <p className="text-sm text-gray-500">AI-powered document analysis & plagiarism detection</p>
-          </div>
+    <header className="bg-white shadow-sm mb-6">
+      <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+        <div className="flex items-center">
+          <FileText className="h-6 w-6 text-indigo-600 mr-2" />
+          <h1 className="text-xl font-semibold text-gray-800">Document Similarity Checker</h1>
         </div>
-
-        {/* Actions */}
-        <div className="flex items-center space-x-5">
-          <button className="flex items-center text-sm text-gray-600 hover:text-indigo-600 transition-colors font-medium">
-            <HelpCircle className="w-4 h-4 mr-1" />
-            Help
-          </button>
-
-          <button className="flex items-center bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors py-2 px-4 rounded-md text-sm font-medium">
-            <BarChart2 className="w-4 h-4 mr-2" />
-            View Reports
-          </button>
-
-          {/* Profile */}
-          <div className="relative group">
-            <img
-              src="https://via.placeholder.com/40"
-              alt="Profile"
-              className="w-10 h-10 rounded-full border-2 border-indigo-600 object-cover cursor-pointer"
-            />
-            {/* Future dropdown (optional) */}
-            {/* <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
-              <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
-              <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
-            </div> */}
-          </div>
+        
+        <div className="flex items-center gap-4">
+          <a href="/dashboard" className="text-gray-600 hover:text-indigo-600 flex items-center">
+            <BarChart2 className="h-5 w-5 mr-1" />
+            <span className="hidden sm:inline">Dashboard</span>
+          </a>
+          
+          <a href="/history" className="text-gray-600 hover:text-indigo-600 flex items-center">
+            <Database className="h-5 w-5 mr-1" />
+            <span className="hidden sm:inline">History</span>
+          </a>
+          
+          {user && (
+            <div className="text-gray-700 font-medium">
+              {user.name || user.email}
+            </div>
+          )}
         </div>
       </div>
     </header>

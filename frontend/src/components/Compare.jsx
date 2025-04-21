@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 
 import EnhancedStructureTab from './EnhancedStructureTab';
+
+import { Instruction } from './Instruction';
 import Header from './Header';
 
 const Compare = () => {
@@ -15,7 +17,8 @@ const Compare = () => {
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
   const [expandedItem, setExpandedItem] = useState(null);
-  const { token } = useSelector((state) => state.auth);
+  
+const { user, token } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState('summary');
 
   const handleFileChange = (e) => {
@@ -67,6 +70,11 @@ const Compare = () => {
         formData.append('documents', file);
       });
 
+      if (user.email) {
+        formData.append('email', user.email);
+      }
+
+      console.log(user);
       const response = await axios.post('http://localhost:5000/api/documents/compare', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -386,7 +394,7 @@ const renderSharedSequences = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-500 to-teal-500 p-4 md:p-8">
-      {/* <Header/> */}
+      <Header/>
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row gap-6">
           {/* Left panel - Upload form */}
@@ -472,7 +480,7 @@ const renderSharedSequences = () => {
             </div>
             
             {/* Instructions */}
-            <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
+            {/* <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
               <h3 className="text-lg font-medium text-gray-800 mb-2">How It Works</h3>
               <ol className="list-decimal pl-5 space-y-2 text-gray-700">
                 <li>Upload two documents you want to compare (PDF, DOCX, or TXT)</li>
@@ -481,8 +489,11 @@ const renderSharedSequences = () => {
                 <li>See similarity scores and potential plagiarism indicators</li>
                 <li>Get AI-generated explanations and recommendations</li>
               </ol>
-            </div>
+            </div> */}
+            <Instruction/>
           </div>
+
+          
           
           {/* Right panel - Results */}
           <div id="results" className="w-full md:w-1/2">

@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const { text } = require('express');
+const ComparisonResult = require('../models/response');
 
 const natural = require('natural');
 const tokenizer = new natural.WordTokenizer();
@@ -532,6 +533,7 @@ exports.compareDocuments = async (req, res) => {
     // Calculate similarity metrics
     const cosineSim = computeSimilarity(text1, text2);
     const jaccardSim = jaccardSimilarity(text1, text2);
+    const semanticSim = calculateSemanticSimilarity(text1, text2);
     const hammingDistance = compareFingerprints(text1, text2);
     
     // Find similar content between documents
@@ -552,39 +554,110 @@ exports.compareDocuments = async (req, res) => {
       );
     }
 
-    // Prepare result for explanation
-const resultData = {
-  similarity: cosineSim.toFixed(4),
-  jaccardSimilarity: jaccardSim.toFixed(4),
-  hammingDistance,
-  similarContent: paragraphAnalysis,
-  doc1Paragraphs: paras1,
-  doc2Paragraphs: paras2,
-  doc1Text: text1,
-  doc2Text: text2,
-  sharedSequences: sharedSequences.slice(0, 20),
-  fileInfo: {
-    file1: {
-      name: file1.originalname,
-      size: file1.size,
-      type: file1.mimetype
-    },
-    file2: {
-      name: file2.originalname,
-      size: file2.size,
-      type: file2.mimetype
+    // Create result object
+    const resultData = {
+      similarity: cosineSim.toFixed(4),
+      jaccardSimilarity: jaccardSim.toFixed(4),
+      semanticSimilarity: semanticSim.toFixed(4),
+      hammingDistance,
+      plagiarismDetected: isPlagiarized ? 'Yes' : 'No',
+      similarContent: paragraphAnalysis,
+      doc1Paragraphs: paras1,
+      doc2Paragraphs: paras2,
+      doc1Text: text1, // Store for explanation generation
+      doc2Text: text2, // Store for explanation generation
+      sharedSequences: sharedSequences.slice(0, 20),  // Limit to top 20 shared sequences
+      fileInfo: {
+        file1: {
+          name: file1.originalname,
+          size: file1.size,
+          type: file1.mimetype
+        },
+        file2: {
+          name: file2.originalname,
+          size: file2.size,
+          type: file2.mimetype
+        }
+      }
+    };
+    
+    // Generate AI explanation
+    resultData.explanation = generateSimilarityExplanation(resultData);
+    
+    // Identify most distinctive words in each document
+    const wordsDoc1 = text1.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
+    const wordsDoc2 = text2.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
+    
+    const freqDoc1 = {};
+    wordsDoc1.forEach(word => freqDoc1[word] = (freqDoc1[word] || 0) + 1);
+    
+    const freqDoc2 = {};
+    wordsDoc2.forEach(word => freqDoc2[word] = (freqDoc2[word] || 0) + 1);
+    
+    const doc1Words = Object.keys(freqDoc1).map(word => ({ word, count: freqDoc1[word] }));
+    const doc2Words = Object.keys(freqDoc2).map(word => ({ word, count: freqDoc2[word] }));
+    
+    resultData.topWords = {
+      doc1: doc1Words.sort((a, b) => b.count - a.count).slice(0, 10),
+      doc2: doc2Words.sort((a, b) => b.count - a.count).slice(0, 10)
+    };
+    
+    // Calculate frequency distribution for charts
+    resultData.sentenceLengthData = {
+      doc1: analyzeTextStructure(text1),
+      doc2: analyzeTextStructure(text2)
+    };
+
+    
+    
+    // Save to database if user is authenticated
+    if (req.body.email) {
+      try {
+        const userEmail = req.body.email;
+    
+        const comparisonToSave = new ComparisonResult({
+          user: {
+            email: userEmail, // Store the user's email
+          },
+          similarity: parseFloat(resultData.similarity),
+          jaccardSimilarity: parseFloat(resultData.jaccardSimilarity),
+          semanticSimilarity: parseFloat(resultData.semanticSimilarity),
+          hammingDistance: resultData.hammingDistance,
+          plagiarismDetected: resultData.plagiarismDetected === 'Yes', // Convert to boolean
+          similarContent: resultData.similarContent.map(content => ({
+            paragraph1: content.paragraph1,
+            paragraph2: content.paragraph2,
+            similarity: content.similarity,
+            index1: content.index1,
+            index2: content.index2
+          })),
+          sharedSequences: resultData.sharedSequences.map(sequence => ({
+            text: sequence.text,
+            pos1: sequence.pos1,
+            pos2: sequence.pos2,
+            length: sequence.length
+          })),
+          doc1Paragraphs: resultData.doc1Paragraphs,
+          doc2Paragraphs: resultData.doc2Paragraphs,
+          doc1Text: resultData.doc1Text,
+          doc2Text: resultData.doc2Text,
+          fileInfo: resultData.fileInfo
+        });
+    
+        const savedComparison = await comparisonToSave.save();
+        resultData.id = savedComparison._id;
+      } catch (dbError) {
+        console.error("Error saving to database:", dbError);
+      }
+    } else {
+      console.warn("User not authenticated, skipping database save");
     }
-  }
-};
-
-// Add explanation
-resultData.explanation = generateSimilarityExplanation(resultData);
-
-// Add plagiarism status separately
-resultData.plagiarismDetected = isPlagiarized ? 'Yes' : 'No';
-
+    
+    
+    
     // Send response with comprehensive analysis
     res.json(resultData);
+    
   } catch (error) {
     console.error("Error occurred during comparison: ", error);
     res.status(500).json({ 
