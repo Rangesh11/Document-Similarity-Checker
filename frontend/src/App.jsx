@@ -4,6 +4,7 @@ import Login from './components/Login';  // Import your Login component
 import SignUp from './components/SignUp';  // Import your SignUp component
 import Compare from './components/Compare'
 // import Dashboard from './pages/Dashboard';
+import ProfilePage from './components/Profile';
 
 const App = () => {
   return (
@@ -14,6 +15,7 @@ const App = () => {
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
+          <Route path="/profile" element={<ProfilePage />} />
 
           <Route path="/dashboard" element={<Compare/>} />
         </Routes>

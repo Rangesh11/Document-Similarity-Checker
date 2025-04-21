@@ -1,9 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FileText, BarChart2, Database } from 'lucide-react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from '../redux/authSlice'; // Import logout action from your authSlice
+import { useNavigate } from 'react-router-dom'; // Import useNavigate for redirecting
 
 const Header = () => {
   const { user } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+  const navigate = useNavigate(); // Initialize navigate hook
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const toggleDropdown = () => {
+    setDropdownOpen((prevState) => !prevState);
+  };
+
+  const handleLogout = () => {
+    dispatch(logout()); // Dispatch logout action to clear the user and token
+    navigate('/login'); // Redirect to the login page after logout
+  };
+
+  const userInitials = user?.name
+    ? user.name.split(' ').map((n) => n[0]).join('')
+    : user?.email?.split('@')[0].slice(0, 2).toUpperCase();
 
   return (
     <header className="bg-white shadow-sm mb-6">
@@ -25,8 +43,37 @@ const Header = () => {
           </a>
           
           {user && (
-            <div className="text-gray-700 font-medium">
-              {user.name || user.email}
+            <div className="relative">
+              {/* User avatar or initials */}
+              <button
+                onClick={toggleDropdown}
+                className="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-100 focus:outline-none"
+              >
+                <div className="flex items-center justify-center bg-indigo-600 text-white w-8 h-8 rounded-full">
+                  {userInitials}
+                </div>
+                <span className="hidden sm:inline text-gray-700 font-medium">{user.name || user.email}</span>
+              </button>
+
+              {/* Dropdown Menu */}
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                  <div className="py-2">
+                    <a
+                      href="/profile"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Profile
+                    </a>
+                    <button
+                      onClick={handleLogout}
+                      className="block w-full px-4 py-2 text-sm text-gray-700 text-left hover:bg-gray-100"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
