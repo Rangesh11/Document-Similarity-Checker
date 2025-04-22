@@ -161,31 +161,25 @@ exports.compareDocuments = async (req, res) => {
       });
     }
 
-    // Calculate similarity metrics
     const cosineSim = computeSimilarity(text1, text2);
     const jaccardSim = jaccardSimilarity(text1, text2);
     const semanticSim = calculateSemanticSimilarity(text1, text2);
     const hammingDistance = compareFingerprints(text1, text2);
-    
-    // Find similar content between documents
+ 
     const { similar, paras1, paras2 } = getSimilarContent(text1, text2);
     
-    // Get shared sequences for further analysis
     const sharedSequences = findSharedSequences(text1, text2);
     
-    // Determine if plagiarism is detected
     const isPlagiarized = detectPlagiarism(cosineSim, jaccardSim, similar);
 
-    // Prepare detailed paragraph summary
     let paragraphAnalysis = [];
     if (similar.length > 0) {
-      // Sort by similarity score (highest first)
+
       paragraphAnalysis = similar.sort((a, b) => 
         parseFloat(b.similarity) - parseFloat(a.similarity)
       );
     }
 
-    // Create result object
     const resultData = {
       similarity: cosineSim.toFixed(4),
       jaccardSimilarity: jaccardSim.toFixed(4),
