@@ -6,6 +6,7 @@ const authRoutes = require('./routes/authRoutes');
 const compareRoutes = require('./routes/compareRoutes');
 const cors = require('cors');
 const profileRoutes = require('./routes/profileRoute');
+const historyRoutes = require('./routes/historyRoutes'); 
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes); 
 app.use('/api/documents', compareRoutes);
 app.use('/api/profile', profileRoutes); 
+app.use('/api', historyRoutes);
 
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,

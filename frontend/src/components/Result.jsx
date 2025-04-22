@@ -1,126 +1,158 @@
-import React from 'react';
-import SummaryTab from './tabs/SummaryTab';
-import DetailsTab from './tabs/DetailsTab';
-import AnalysisTab from './tabs/AnalysisTab';
-import StructureTab from './tabs/StructureTab';
-import EmptyResultState from './EmptyResultState';
-import TabNavigation from './TabNavigation';
-import ReportDownloadButton from './ReportDownloadButton';
-import { FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import api from '../utils/api';
 
-const Result = ({ result, activeTab, setActiveTab, expandedItem, toggleItem, loading }) => {
-  // If no results yet, show empty state
-  if (!result && !loading) {
-    return <EmptyResultState />;
+const Result = () => {
+  const { id } = useParams();
+  const [comparison, setComparison] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('side-by-side');
+
+  useEffect(() => {
+    const fetchComparison = async () => {
+      try {
+        const response = await api.get(`/comparisons/${id}`);
+        setComparison(response.data);
+      } catch (err) {
+        setError('Failed to load comparison data');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchComparison();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-12 sm:px-6 lg:px-8 flex justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+      </div>
+    );
   }
 
-  // Function to highlight similarities between text sections
-  const highlightSimilarities = (text1, text2) => {
-    // Get words from both texts
-    const words1 = text1.split(/\s+/);
-    const words2 = text2.split(/\s+/);
-    
-    // Find matching sequences (simplified approach)
-    let highlighted1 = '';
-    let highlighted2 = '';
-    
-    for (let i = 0; i < words1.length; i++) {
-      let found = false;
-      
-      // Check for matches of 3+ consecutive words
-      for (let j = 0; j < words2.length - 2; j++) {
-        if (i < words1.length - 2 && 
-            words1[i].toLowerCase() === words2[j].toLowerCase() &&
-            words1[i+1].toLowerCase() === words2[j+1].toLowerCase() &&
-            words1[i+2].toLowerCase() === words2[j+2].toLowerCase()) {
-          
-          // Found a match of at least 3 words
-          let matchLength = 3;
-          
-          // See how long this match continues
-          while (i + matchLength < words1.length && 
-                j + matchLength < words2.length &&
-                words1[i + matchLength].toLowerCase() === words2[j + matchLength].toLowerCase()) {
-            matchLength++;
-          }
-          
-          // Add highlighted match to text1
-          highlighted1 += `<span class="bg-yellow-200">${words1.slice(i, i + matchLength).join(' ')}</span> `;
-          i += matchLength - 1; // Skip the matched words
-          found = true;
-          break;
-        }
-      }
-      
-      if (!found && i < words1.length) {
-        highlighted1 += words1[i] + ' ';
-      }
-    }
-    
-    // Similar process for text2
-    for (let i = 0; i < words2.length; i++) {
-      let found = false;
-      
-      for (let j = 0; j < words1.length - 2; j++) {
-        if (i < words2.length - 2 && 
-            words2[i].toLowerCase() === words1[j].toLowerCase() &&
-            words2[i+1].toLowerCase() === words1[j+1].toLowerCase() &&
-            words2[i+2].toLowerCase() === words1[j+2].toLowerCase()) {
-          
-          let matchLength = 3;
-          
-          while (i + matchLength < words2.length && 
-                j + matchLength < words1.length &&
-                words2[i + matchLength].toLowerCase() === words1[j + matchLength].toLowerCase()) {
-            matchLength++;
-          }
-          
-          highlighted2 += `<span class="bg-yellow-200">${words2.slice(i, i + matchLength).join(' ')}</span> `;
-          i += matchLength - 1;
-          found = true;
-          break;
-        }
-      }
-      
-      if (!found && i < words2.length) {
-        highlighted2 += words2[i] + ' ';
-      }
-    }
-    
-    return { highlighted1, highlighted2 };
-  };
+  if (error) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 text-red-700">
+          <p>{error}</p>
+          <Link to="/" className="mt-4 inline-block text-purple-600 hover:underline">
+            Return to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!comparison) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
+        <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 text-yellow-700">
+          <p>Comparison not found</p>
+          <Link to="/" className="mt-4 inline-block text-purple-600 hover:underline">
+            Return to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div id="results" className="w-full md:w-1/2">
-      {result && (
-        <div className="bg-white rounded-lg shadow-lg p-6 overflow-y-auto max-h-[calc(100vh-2rem)]">
-          <h2 className="text-2xl font-semibold text-indigo-700 mb-6">
-            Comparison Results
-          </h2>
-          
-          {/* Tabs Navigation */}
-          <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
-          
-          {/* Tab Content */}
-          {activeTab === 'summary' && <SummaryTab result={result} />}
-          
-          {activeTab === 'details' && (
-            <DetailsTab 
-              result={result} 
-              expandedItem={expandedItem}
-              toggleItem={toggleItem}
-              highlightSimilarities={highlightSimilarities}
-            />
+    <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+        <div className="bg-gradient-to-r from-purple-700 to-indigo-800 px-6 py-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-white">{comparison.title}</h1>
+              {comparison.description && (
+                <p className="text-purple-200 mt-1">{comparison.description}</p>
+              )}
+            </div>
+            <div className="mt-4 md:mt-0">
+              <Link
+                to="/compare"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-purple-700 bg-white hover:bg-purple-50"
+              >
+                Create New Comparison
+              </Link>
+            </div>
+          </div>
+        </div>
+        
+        <div className="border-b border-gray-200">
+          <nav className="flex -mb-px">
+            <button
+              onClick={() => setActiveTab('side-by-side')}
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                activeTab === 'side-by-side'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Side by Side
+            </button>
+            <button
+              onClick={() => setActiveTab('original')}
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                activeTab === 'original'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Original
+            </button>
+            <button
+              onClick={() => setActiveTab('enhanced')}
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                activeTab === 'enhanced'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Enhanced
+            </button>
+          </nav>
+        </div>
+        
+        <div className="p-6">
+          {activeTab === 'side-by-side' && (
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <div>
+                <h2 className="text-lg font-medium text-gray-900 mb-2">Original Text</h2>
+                <div className="bg-gray-50 p-4 rounded-md border border-gray-200 whitespace-pre-wrap">
+                  {comparison.originalText}
+                </div>
+              </div>
+              <div>
+                <h2 className="text-lg font-medium text-gray-900 mb-2">Enhanced Text</h2>
+                <div className="bg-purple-50 p-4 rounded-md border border-purple-200 whitespace-pre-wrap">
+                  {comparison.enhancedText}
+                </div>
+              </div>
+            </div>
           )}
           
-          {activeTab === 'analysis' && <AnalysisTab result={result} />}
+          {activeTab === 'original' && (
+            <div>
+              <h2 className="text-lg font-medium text-gray-900 mb-2">Original Text</h2>
+              <div className="bg-gray-50 p-4 rounded-md border border-gray-200 whitespace-pre-wrap">
+                {comparison.originalText}
+              </div>
+            </div>
+          )}
           
-          {activeTab === 'structure' && <StructureTab result={result} />}
-          
-          {/* Download report button */}
-          <ReportDownloadButton result={result} />
+          {activeTab === 'enhanced' && (
+            <div>
+              <h2 className="text-lg font-medium text-gray-900 mb-2">Enhanced Text</h2>
+              <div className="bg-purple-50 p-4 rounded-md border border-purple-200 whitespace-pre-wrap">
+                {comparison.enhancedText}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

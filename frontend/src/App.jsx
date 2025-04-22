@@ -5,6 +5,7 @@ import SignUp from './components/SignUp';  // Import your SignUp component
 import Compare from './components/Compare'
 // import Dashboard from './pages/Dashboard';
 import ProfilePage from './components/Profile';
+import History from './components/History'; 
 
 const App = () => {
   return (
@@ -16,6 +17,7 @@ const App = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/history" element={<History />} />
 
           <Route path="/dashboard" element={<Compare/>} />
         </Routes>

@@ -8,18 +8,18 @@ const SignUp = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false); // Adding a loading state
+  const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (password.length < 6) { // Password validation
+    if (password.length < 6) { 
       setError('Password must be at least 6 characters long');
       return;
     }
 
-    setLoading(true); // Start loading
+    setLoading(true);
 
     try {
       const response = await axios.post('http://localhost:5000/api/auth/signup', {
@@ -31,15 +31,13 @@ const SignUp = () => {
       const { token } = response.data;
       dispatch(setCredentials({ user: { name, email }, token }));
 
-      // Handle the token (store it, redirect user, etc.)
       console.log('Signed up successfully!', token);
 
-      // Optionally, you can redirect the user to login after successful sign-up
       window.location.href = '/dashboard';
     } catch (err) {
       setError(err.response?.data?.error || 'An error occurred');
     } finally {
-      setLoading(false); // Stop loading after the request
+      setLoading(false);
     }
   };
 
@@ -49,7 +47,6 @@ const SignUp = () => {
         <form onSubmit={handleSubmit} className="w-full max-w-md space-y-6 bg-white p-8 rounded-lg shadow-lg">
           <h2 className="text-3xl font-semibold text-center text-teal-600">Sign Up</h2>
 
-          {/* Error message */}
           {error && <p className="text-red-500 text-center">{error}</p>}
 
           <div>

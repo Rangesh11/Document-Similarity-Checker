@@ -3,20 +3,19 @@ import { LineChart, Line, AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Ca
 import { Info, BarChart2, Zap } from 'lucide-react';
 
 const StructureTab = ({ result }) => {
-  // Generate mock section-wise distance data if not available
+
   const sectionDistances = result.sectionDistances || Array.from({ length: 8 }, (_, i) => ({
     section: `Section ${i + 1}`,
     distance: Math.min(100, Math.max(10, result.hammingDistance - 15 + Math.random() * 30)),
   }));
 
-  // Determine threshold colors
+ 
   const getDistanceColor = (distance) => {
     if (distance < 30) return '#10B981'; // Green for similar
     if (distance < 60) return '#F59E0B'; // Yellow/Orange for moderate
     return '#EF4444'; // Red for different
   };
 
-  // Progress circle for cosine similarity
   const CosineSimilarityCircle = ({ value }) => {
     const percentage = Math.round(value * 100);
     const circumference = 2 * Math.PI * 45;
@@ -232,7 +231,7 @@ const StructureTab = ({ result }) => {
   );
 };
 
-// This is what will be rendered when the Structure tab is selected
+
 const StructureTabContent = ({ result }) => {
   if (!result) return null;
   
