@@ -81,9 +81,9 @@ const SummaryTab = ({ result }) => {
         <div className="bg-gray-50 p-4 rounded-lg">
           <h3 className="text-lg font-medium text-gray-800 mb-2">Plagiarism Detection</h3>
           <div className={`text-xl font-bold ${
-            result.plagiarismDetected === 'Yes' ? 'text-red-600' : 'text-green-600'
+            result.plagiarismDetected ? 'text-red-600' : 'text-green-600'
           }`}>
-            {result.plagiarismDetected}
+            {result.plagiarismDetected ? 'Yes' : 'No'}
           </div>
           <p className="text-gray-600 text-sm mt-1">
             Based on combined similarity metrics
@@ -98,7 +98,7 @@ const SummaryTab = ({ result }) => {
           <div className="flex items-center">
             <div className="w-32 text-gray-600">Similar Paragraphs:</div>
             <div className="font-medium text-gray-800">
-              {result.similarContent.length} found
+              {result.similarContent?.length || 0} found
             </div>
           </div>
           <div className="flex items-center">

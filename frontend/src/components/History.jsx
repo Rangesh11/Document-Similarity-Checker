@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
 import ResultsPanel from './ResultsPanel';
-import Header from './Header'; 
+import Header from './Header'; // 🔥 Import your header component
 import { Clock, Search } from 'lucide-react';
 
 const History = () => {
@@ -71,7 +71,7 @@ const History = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-blue-500 to-teal-500">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100">
       <Header />
 
       <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-lg p-6 mt-4">
