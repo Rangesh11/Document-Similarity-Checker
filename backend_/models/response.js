@@ -1,3 +1,4 @@
+// response.js (ComparisonResult model)
 const mongoose = require('mongoose');
 
 const comparisonResultSchema = new mongoose.Schema({
@@ -38,7 +39,7 @@ const comparisonResultSchema = new mongoose.Schema({
       type: { type: String }
     }
   }
-});
+}, { timestamps: true }); // Added timestamps to enable sorting by createdAt
 
 const ComparisonResult = mongoose.model('ComparisonResult', comparisonResultSchema);
 

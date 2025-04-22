@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
+import ResultsPanel from './ResultsPanel';
+import Header from './Header'; 
+import { Clock, Search } from 'lucide-react';
 
 const History = () => {
   const [historyData, setHistoryData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const { user, token } = useSelector((state) => state.auth);
 
   useEffect(() => {
@@ -15,17 +19,18 @@ const History = () => {
         setLoading(false);
         return;
       }
-    
+
       try {
         const authToken = token || localStorage.getItem('token');
-    
+
         if (!authToken) {
           setError('Authentication token not found. Please login again.');
           setLoading(false);
           return;
         }
-    
-        const response = await axios.post('http://localhost:5000/api/history',
+
+        const response = await axios.post(
+          'http://localhost:5000/api/history',
           { email: user.email },
           {
             headers: {
@@ -34,22 +39,28 @@ const History = () => {
             }
           }
         );
-    
+
         setHistoryData(response.data);
         setLoading(false);
       } catch (err) {
         console.error('Error fetching history:', err);
         setError(
-          err.response?.data?.message || 
+          err.response?.data?.message ||
           'Failed to fetch history data. Please try again later.'
         );
         setLoading(false);
       }
     };
-    
 
     fetchHistory();
   }, [user, token]);
+
+  const filteredHistory = searchTerm
+    ? historyData.filter(item =>
+        item.document1?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.document2?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : historyData;
 
   if (loading) {
     return (
@@ -60,69 +71,77 @@ const History = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Comparison History</h2>
-      </div>
+    <div className="min-h-screen bg-gradient-to-r from-blue-500 to-teal-500">
+      <Header />
 
-      {error && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
-          <p>{error}</p>
+      <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-lg p-6 mt-4">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-indigo-700 flex items-center">
+            <Clock className="h-6 w-6 mr-2" />
+            Comparison History
+          </h2>
         </div>
-      )}
 
-      {!error && historyData.length === 0 && (
-        <div className="bg-gray-50 rounded-lg p-8 text-center">
-          <p className="text-gray-600">No comparison history found.</p>
-        </div>
-      )}
-
-      {!error && historyData.length > 0 && (
-        <div className="space-y-4">
-          {historyData.map((item, index) => (
-            <div key={item._id || index} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow duration-200 overflow-hidden">
-              <div className="border-b border-gray-200 bg-gray-50 px-6 py-3">
-                <h3 className="font-medium text-gray-800">Comparison #{index + 1}</h3>
-                <p className="text-sm text-gray-500">
-                  {new Date(item.date).toLocaleString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: 'numeric'
-                  })}
-                </p>
-              </div>
-              <div className="px-6 py-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Document 1</h4>
-                    <p className="text-gray-800 break-words">{item.document1}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Document 2</h4>
-                    <p className="text-gray-800 break-words">{item.document2}</p>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-500 mb-1">Similarity Score</h4>
-                  <div className="flex items-center">
-                    <div className="w-full bg-gray-200 rounded-full h-2.5 mr-2">
-                      <div 
-                        className="bg-blue-600 h-2.5 rounded-full" 
-                        style={{ width: `${Math.min(100, Math.max(0, item.similarityScore * 100))}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-sm font-medium text-gray-700">
-                      {(item.similarityScore * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
+        {/* Search Box */}
+        <div className="mb-6">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
             </div>
-          ))}
+            <input
+              type="text"
+              placeholder="Search your comparison history..."
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
-      )}
+
+        {error && (
+          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
+            <p>{error}</p>
+          </div>
+        )}
+
+        {!error && filteredHistory.length === 0 && !loading && (
+          <div className="bg-gray-50 rounded-lg p-8 text-center">
+            {searchTerm ? (
+              <p className="text-gray-600">No results found for "{searchTerm}".</p>
+            ) : (
+              <p className="text-gray-600">No comparison history found.</p>
+            )}
+          </div>
+        )}
+
+        {!error && filteredHistory.length > 0 && (
+          <div className="space-y-6">
+            {Array.from({ length: Math.ceil(filteredHistory.length / 2) }).map((_, rowIndex) => (
+              <div key={rowIndex} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredHistory
+                  .slice(rowIndex * 2, rowIndex * 2 + 2)
+                  .map((item, index) => (
+                    <div key={item._id || index} className="bg-gray-50 rounded-lg p-4 shadow">
+                      <div className="mb-3">
+                        <h3 className="text-lg font-medium text-gray-900">
+                          Comparison #{rowIndex * 2 + index + 1} -{' '}
+                          {new Date(item.createdAt || Date.now()).toLocaleDateString()}
+                        </h3>
+                        <div className="text-sm text-gray-500 mt-1">
+                          Files: {item.fileInfo?.file1?.name || 'Document 1'} &{' '}
+                          {item.fileInfo?.file2?.name || 'Document 2'}
+                        </div>
+                      </div>
+                      <div className="border border-gray-200 rounded-md overflow-hidden">
+                        <ResultsPanel result={item} loading={false} />
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
